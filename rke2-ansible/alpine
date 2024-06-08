@@ -1,0 +1,38 @@
+FROM alpine:3.20.0
+
+ARG VERSION
+
+# Create user and ensure the package list is updated and necessary packages are installed
+RUN addgroup -g 1000 user && \
+    adduser -D -h /home/user -s /bin/bash -G user -u 1000 user && \
+    apk update && \
+    apk add --no-cache sudo \
+        bash \
+        vim \
+        curl \
+        ansible \
+        openssl \
+        shadow && \
+    rm -rf /var/cache/apk/* /tmp/* /var/tmp/*
+
+# Add user to the sudoers group
+RUN addgroup sudo && usermod -aG sudo user
+
+# Install Helm
+RUN curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+
+# Switch to the created user
+USER user
+WORKDIR /home/user
+
+# Create necessary directories for air-gapped deployment and download required files
+RUN mkdir /home/user/tarball_install && \
+    curl -fsSL -o /home/user/tarball_install/rke2.linux-amd64.tar.gz https://github.com/rancher/rke2/releases/download/$VERSION%2Brke2r1/rke2.linux-amd64.tar.gz && \
+    curl -fsSL -o /home/user/tarball_install/rke2-images.linux-amd64.tar.zst https://github.com/rancher/rke2/releases/download/$VERSION%2Brke2r1/rke2-images.linux-amd64.tar.zst && \
+    curl -fsSL -o /home/user/tarball_install/rke2.sh https://get.rke2.io
+
+# Install Ansible collections
+RUN ansible-galaxy collection install kubernetes.core ansible.utils
+
+# Command to run by default when the container starts
+CMD ["bash"]
