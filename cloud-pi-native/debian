@@ -1,0 +1,39 @@
+FROM debian:12-slim 
+
+ARG VERSION
+
+# Create user and ensure the package list is updated and necessary packages are installed
+RUN groupadd -g 1000 user && \ 
+    useradd -rm -d /home/user -s /bin/bash -g root -G user,sudo -u 1000 user && \
+    apt update && \
+    apt install -y sudo \
+        bash \
+        vim \
+        curl \
+        ansible \
+        python3-pip \
+        git \
+        yq && \
+    apt clean && \
+    rm -rf /var/lib/apt/lists/* && \
+    find /usr/lib -name EXTERNALLY-MANAGED -exec rm -f {} \;
+
+# Install Helm
+RUN curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+
+# Install Kubectl
+RUN curl -Lo /usr/local/bin/kubectl https://dl.k8s.io/release/$VERSION/bin/linux/amd64/kubectl && \
+    chmod +x /usr/local/bin/kubectl 
+
+# Set user as default
+USER user
+WORKDIR /home/user
+
+# Install the Python modules
+RUN pip3 install --no-cache-dir pyyaml kubernetes python-gitlab
+
+# Install Ansible collections
+RUN ansible-galaxy collection install community.general kubernetes.core
+
+# Command to run by default when the container starts
+CMD ["bash"]
