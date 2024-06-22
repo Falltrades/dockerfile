@@ -17,29 +17,21 @@ RUN addgroup -g 1000 user && \
         musl-dev \
         python3-dev \
         linux-headers \
-        git && \
+        yq && \
     find /usr/lib -name EXTERNALLY-MANAGED -exec rm -f {} \;
-
-# Copy the Python script into the container
-COPY unzip.py .
-
-# Install Terraform
-RUN curl -LO https://releases.hashicorp.com/terraform/${VERSION}/terraform_${VERSION}_linux_amd64.zip && \
-    python3 unzip.py terraform_${VERSION}_linux_amd64.zip && \
-    rm -f terraform_${VERSION}_linux_amd64.zip LICENSE.txt unzip.py && \
-    chmod +x terraform && \
-    mv terraform /usr/local/bin
-
+     
+# Get SOPS
+RUN curl -LO https://github.com/getsops/sops/releases/download/${VERSION}/sops-${VERSION}.linux.amd64 && \
+    mv sops-${VERSION}.linux.amd64 /usr/local/bin/sops && \                                                                                                                             
+    chmod +x /usr/local/bin/sops
+     
 # Set user as default
 USER user
 WORKDIR /home/user
-
+     
 # Install the Python modules
 RUN pip3 install --no-cache-dir python-openstackclient python-octaviaclient
-
-# Add the installation directory to PATH
-ENV PATH=$PATH:/home/user/.local/bin
-
+     
 # Command to run by default when the container starts
 CMD ["bash"]
 

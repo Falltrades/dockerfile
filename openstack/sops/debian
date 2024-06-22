@@ -1,0 +1,32 @@
+FROM debian:12-slim 
+
+ARG VERSION
+
+# Create user and ensure the package list is updated and necessary packages are installed
+RUN groupadd -g 1000 user && \
+    useradd -rm -d /home/user -s /bin/bash -g root -G user,sudo -u 1000 user && \
+    apt update && \
+    apt install -y \
+    bash \
+    curl \
+    python3 \
+    python3-pip \
+    yq && \
+    apt clean && \
+    rm -rf /var/lib/apt/lists/* && \
+    find /usr/lib -name EXTERNALLY-MANAGED -exec rm -f {} \;
+
+# Get SOPS
+RUN curl -LO https://github.com/getsops/sops/releases/download/${VERSION}/sops-${VERSION}.linux.amd64 && \
+    mv sops-${VERSION}.linux.amd64 /usr/local/bin/sops && \
+    chmod +x /usr/local/bin/sops
+
+# Set user as default
+USER user
+WORKDIR /home/user
+
+# Install the Python modules
+RUN pip3 install --no-cache-dir python-openstackclient python-octaviaclient
+
+# Command to run by default when the container starts
+CMD ["bash"]
