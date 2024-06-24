@@ -30,7 +30,7 @@ USER user
 WORKDIR /home/user
 
 # Install the Python modules
-RUN pip3 install --no-cache-dir pyyaml kubernetes python-gitlab
+RUN pip3 install --no-cache-dir pyyaml kubernetes python-gitlab jmespath
 
 # Install Ansible collections
 RUN ansible-galaxy collection install community.general kubernetes.core
