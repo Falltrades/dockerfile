@@ -11,6 +11,7 @@ RUN addgroup -g 1000 user && \
         bash \
         vim \
         curl \
+        openssl \
         python3 \
         py3-pip \
         gcc \
@@ -31,6 +32,9 @@ WORKDIR /home/user
      
 # Install the Python modules
 RUN pip3 install --no-cache-dir python-openstackclient python-octaviaclient
+
+# Add the installation directory to PATH
+ENV PATH=$PATH:/home/user/.local/bin
      
 # Command to run by default when the container starts
 CMD ["bash"]
