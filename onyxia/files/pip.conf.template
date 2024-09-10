@@ -1,0 +1,3 @@
+[global]
+index-url = https://nexus.${FORGEDOMAIN}/repository/pypi-proxy/simple
+trusted-host = nexus.${FORGEDOMAIN}

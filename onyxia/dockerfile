@@ -1,0 +1,107 @@
+FROM inseefrlab/onyxia-vscode-python:py3.12.4
+
+# Set environment variables
+ARG FORGEDOMAIN
+ARG APTDOMAIN
+ARG USER
+ARG PASS
+ARG PROXY
+ARG NO_PROXY
+ENV http_proxy=http://$USER:$PASS@$PROXY:3128
+ENV https_proxy=http://$USER:$PASS@$PROXY:3128
+ENV no_proxy=$NO_PROXY
+ENV USER=${USER}
+ENV PASS=${PASS}
+ENV PROXY=${PROXY}
+
+ARG KUBECTL_VERSION=v1.30.1
+ARG SOPS_VERSION=v3.9.0
+ARG TF_VERSION=1.9.5
+ARG PACKER_VERSION=1.11.1
+
+# Copy the template file
+COPY files/apt.template /tmp/apt.template
+COPY files/pip.conf.template /tmp/pip.conf.template
+COPY files/vimrc.template ${HOME}/.vimrc
+COPY files/bash_aliases.template ${HOME}/.bash_aliases
+COPY files/requirements.txt /tmp/requirements.txt
+COPY files/settings.json.template ${HOME}/.local/share/code-server/User/settings.json
+
+# Substitute the DOMAIN variable in the template and create the actual config
+RUN envsubst < /tmp/apt.template | sudo tee /etc/apt/apt.conf > /dev/null && \
+    mkdir -p $HOME/.config/pip/ && \
+    envsubst < /tmp/pip.conf.template | tee $HOME/.config/pip/pip.conf  > /dev/null
+
+# Install necessary packages
+RUN sudo apt update && sudo DEBIAN_FRONTEND=noninteractive apt install -y \
+    tzdata \
+    gettext \
+    ssh \
+    vim \
+    git \
+    curl \
+    nmap \
+    netcat \
+    dnsutils \
+    ansible \
+    build-essential \
+    python3-dev \
+    libyaml-dev \
+    python3-pip \
+    virtualenv \
+    s3cmd \
+    jq \
+    unzip \
+    plocate \
+    && sudo rm -rf /var/lib/apt/lists/* \
+    && sudo updatedb
+
+# Create virtual environment
+RUN virtualenv -p python3 $HOME/venv
+
+# Activate the virtual environment
+RUN . $HOME/venv/bin/activate
+
+# Install Python packages
+RUN pip install -r /tmp/requirements.txt
+
+# Install Ansible collections
+RUN ansible-galaxy collection install community.general kubernetes.core ansible.utils
+
+# Install Helm
+RUN curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+
+# Install kubectl
+RUN curl -kLo /tmp/kubectl https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/amd64/kubectl && \
+    chmod +x /tmp/kubectl && \
+    sudo mv /tmp/kubectl /usr/local/bin/kubectl
+
+# Install SOPS
+RUN curl -kLO https://github.com/getsops/sops/releases/download/${SOPS_VERSION}/sops-${SOPS_VERSION}.linux.amd64 && \
+    sudo mv sops-${SOPS_VERSION}.linux.amd64 /usr/local/bin/sops && \
+    sudo chmod +x /usr/local/bin/sops
+
+# Install Terraform
+RUN curl -kLO https://releases.hashicorp.com/terraform/${TF_VERSION}/terraform_${TF_VERSION}_linux_amd64.zip && \
+    unzip terraform_${TF_VERSION}_linux_amd64.zip && \
+    rm -f terraform_${TF_VERSION}_linux_amd64.zip LICENSE.txt && \
+    chmod +x terraform && \
+    sudo mv terraform /usr/local/bin
+
+# Install Packer
+RUN curl -kLO https://releases.hashicorp.com/packer/${PACKER_VERSION}/packer_${PACKER_VERSION}_linux_amd64.zip && \
+    unzip packer_${PACKER_VERSION}_linux_amd64.zip && rm LICENSE.txt && rm packer_${PACKER_VERSION}_linux_amd64.zip && \
+    sudo chmod +x packer && sudo mv packer /usr/local/bin/
+
+# Unset credentials
+RUN sudo rm -rf /etc/apt/apt.conf $HOME/.config/pip/pip.conf /tmp/* &&\
+    sudo chown $USERNAME:$GROUPNAME ${HOME}/.vimrc ${HOME}/.bash_aliases
+ENV http_proxy=""
+ENV https_proxy=""
+ENV no_proxy=""
+ENV USER=""
+ENV PASS=""
+ENV PROXY=""
+
+# Set default command
+CMD ["/bin/bash"]
