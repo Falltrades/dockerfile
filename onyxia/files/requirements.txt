@@ -21,3 +21,4 @@ pyyaml
 kubernetes
 python-gitlab
 jmespath
+ansible-gendoc
