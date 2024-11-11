@@ -6,6 +6,9 @@ docker build --build-arg -t <tag>:<version> .
 
 example :
 ```
-DOCKER_BUILDKIT=1 docker build --build-arg FORGEDOMAIN=$FORGEDOMAIN --build-arg APTDOMAIN=$APTDOMAIN --build-arg USER=$ORIONUSER --build-arg PASS=$ORIONPASS --build-arg PROXY=$PROXY --build-arg NO_PROXY=$no_proxy -t falltrades/onyxia-vscode-python:py3.12.4 .
+awk -F\" '{print "export " $2}' /etc/systemd/system/docker.service.d/http-proxy.conf | grep PROXY > /tmp/secret.txt
+echo "export APTDOMAIN=${APTDOMAIN}" >> /tmp/secret.txt
+echo "export FORGEDOMAIN=${FORGEDOMAIN}" >> /tmp/secret.txt
+DOCKER_BUILDKIT=1 docker build --secret id=https_proxy,src=/tmp/secret.txt . -t falltrades/onyxia-vscode-python:py3.12.4
 ```
 

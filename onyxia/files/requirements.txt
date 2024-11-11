@@ -22,3 +22,4 @@ kubernetes
 python-gitlab
 jmespath
 ansible-gendoc
+ansible-lint
