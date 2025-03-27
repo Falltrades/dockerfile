@@ -9,6 +9,6 @@ example :
 awk -F\" '{print "export " $2}' /etc/systemd/system/docker.service.d/http-proxy.conf | grep PROXY > /tmp/secret.txt
 echo "export APTDOMAIN=${APTDOMAIN}" >> /tmp/secret.txt
 echo "export FORGEDOMAIN=${FORGEDOMAIN}" >> /tmp/secret.txt
-DOCKER_BUILDKIT=1 docker build --secret id=https_proxy,src=/tmp/secret.txt . -t falltrades/onyxia-vscode-python:py3.12.4
+cp /etc/ssl/certs/ca-certificates.crt ./custom-ca-bundle.crt && DOCKER_BUILDKIT=1 docker build --secret id=https_proxy,src=/tmp/secret.txt . -t falltrades/onyxia-vscode-python:py3.12.4 && rm ./custom-ca-bundle.crt
 ```
 

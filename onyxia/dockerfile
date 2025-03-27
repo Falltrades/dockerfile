@@ -1,11 +1,9 @@
 FROM inseefrlab/onyxia-vscode-python:py3.12.4
 
 # Set environment variables
-ARG KUBECTL_VERSION=v1.30.1
-ARG SOPS_VERSION=v3.9.0
 ARG TF_VERSION=1.9.5
 ARG PACKER_VERSION=1.11.1
-ARG YQ_VERSION=v4.44.3
+ARG TSH_VERSION=v16.4.7
 
 # Copy the template file
 COPY files/apt.template /tmp/apt.template
@@ -14,13 +12,15 @@ COPY files/vimrc.template ${HOME}/.vimrc
 COPY files/bash_aliases.template ${HOME}/.bash_aliases
 COPY files/requirements.txt /tmp/requirements.txt
 COPY files/settings.json.template ${HOME}/.local/share/code-server/User/settings.json
+COPY custom-ca-bundle.crt /usr/local/share/ca-certificates/
 
 # Substitute the DOMAIN variable in the template and create the actual config
 RUN --mount=type=secret,id=https_proxy,mode=0755 \ 
     source /run/secrets/https_proxy && \
     envsubst < /tmp/apt.template |sudo -E tee /etc/apt/apt.conf > /dev/null && \
     mkdir -p $HOME/.config/pip/ && \
-    envsubst < /tmp/pip.conf.template | tee $HOME/.config/pip/pip.conf  > /dev/null
+    envsubst < /tmp/pip.conf.template | tee $HOME/.config/pip/pip.conf  > /dev/null && \
+    sudo update-ca-certificates
 
 # Install necessary packages
 RUN sudo -E apt update && sudo -E DEBIAN_FRONTEND=noninteractive apt install -y \
@@ -43,6 +43,8 @@ RUN sudo -E apt update && sudo -E DEBIAN_FRONTEND=noninteractive apt install -y 
     jq \
     unzip \
     plocate \
+    tree \
+    proxytunnel \
     && sudo -E rm -rf /var/lib/apt/lists/* \
     && sudo -E updatedb
 
@@ -58,27 +60,34 @@ RUN pip install -r /tmp/requirements.txt
 # Install Ansible collections
 RUN ansible-galaxy collection install community.general kubernetes.core ansible.utils
 
-# Install Helm
-RUN curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
-
-# Install kubectl
+# Install Brew 
 RUN --mount=type=secret,id=https_proxy,mode=0755 \ 
     source /run/secrets/https_proxy && \
-    curl -kLo /tmp/kubectl https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/amd64/kubectl && \
-    chmod +x /tmp/kubectl && \
-    sudo mv /tmp/kubectl /usr/local/bin/kubectl
+    /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+    
+ENV PATH="$PATH:/home/linuxbrew/.linuxbrew/bin" 
 
-# Install SOPS
+# Install tools with Brew
 RUN --mount=type=secret,id=https_proxy,mode=0755 \ 
     source /run/secrets/https_proxy && \
-    curl -kLO https://github.com/getsops/sops/releases/download/${SOPS_VERSION}/sops-${SOPS_VERSION}.linux.amd64 && \
-    sudo mv sops-${SOPS_VERSION}.linux.amd64 /usr/local/bin/sops && \
-    sudo chmod +x /usr/local/bin/sops
+    brew install helm && \
+    brew install helm-docs && \
+    brew install kubernetes-cli && \
+    brew install sops && \
+    brew install yq
+
+# Install tsh
+RUN --mount=type=secret,id=https_proxy,mode=0755 \ 
+    source /run/secrets/https_proxy && \
+    curl -O https://cdn.teleport.dev/teleport-${TSH_VERSION}-linux-amd64-bin.tar.gz && \
+    tar -xzf teleport-${TSH_VERSION}-linux-amd64-bin.tar.gz && \
+    sudo ./teleport/install && \
+    rm -rf ./teleport
 
 # Install Terraform
 RUN --mount=type=secret,id=https_proxy,mode=0755 \ 
     source /run/secrets/https_proxy && \
-    curl -kLO https://releases.hashicorp.com/terraform/${TF_VERSION}/terraform_${TF_VERSION}_linux_amd64.zip && \
+    curl -LO https://releases.hashicorp.com/terraform/${TF_VERSION}/terraform_${TF_VERSION}_linux_amd64.zip && \
     unzip terraform_${TF_VERSION}_linux_amd64.zip && \
     rm -f terraform_${TF_VERSION}_linux_amd64.zip LICENSE.txt && \
     chmod +x terraform && \
@@ -87,17 +96,9 @@ RUN --mount=type=secret,id=https_proxy,mode=0755 \
 # Install Packer
 RUN --mount=type=secret,id=https_proxy,mode=0755 \ 
     source /run/secrets/https_proxy && \
-    curl -kLO https://releases.hashicorp.com/packer/${PACKER_VERSION}/packer_${PACKER_VERSION}_linux_amd64.zip && \
+    curl -LO https://releases.hashicorp.com/packer/${PACKER_VERSION}/packer_${PACKER_VERSION}_linux_amd64.zip && \
     unzip packer_${PACKER_VERSION}_linux_amd64.zip && rm LICENSE.txt && rm packer_${PACKER_VERSION}_linux_amd64.zip && \
     sudo chmod +x packer && sudo mv packer /usr/local/bin/
-
-# Install yq
-RUN --mount=type=secret,id=https_proxy,mode=0755 \ 
-    source /run/secrets/https_proxy && \
-    curl -kLO https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/yq_linux_amd64.tar.gz && \
-    tar -xzf yq_linux_amd64.tar.gz && \
-    rm install-man-page.sh yq.1 && \
-    sudo mv yq_linux_amd64 /usr/local/bin/yq
 
 # Unset credentials
 RUN unset http_proxy https_proxy no_proxy HTTP_PROXY HTTPS_PROXY NO_PROXY && \ 
