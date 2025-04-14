@@ -1,7 +1,7 @@
 # ---------- CONFIG ----------
-IMAGE_NAME     = falltrades/code-server-custom
-IMAGE_TAG      = 4.4.0
-DOCKERFILE     = code-server
+IMAGE_NAME     = falltrades/onyxia-custom
+IMAGE_TAG      = 1.0.0 
+DOCKERFILE     = onyxia-custom 
 
 CA_CERT_SRC    = /etc/ssl/certs/ca-certificates.crt
 CA_CERT_DEST   = ./custom-ca-bundle.crt
