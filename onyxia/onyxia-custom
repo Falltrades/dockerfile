@@ -110,8 +110,10 @@ RUN chmod -R +x /opt/ && \
     tzdata \
     ssh \
     vim \
+    less \
     git \
     curl \
+    iproute2 \
     nmap \
     netcat-openbsd \
     dnsutils \
