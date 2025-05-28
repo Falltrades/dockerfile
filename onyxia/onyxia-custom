@@ -14,6 +14,7 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y \
     unzip \
     jq \
     tar \
+    git \
     sudo
 
 # Install Helm
@@ -22,6 +23,9 @@ RUN curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | b
 # Install kubectl
 RUN curl -Lo /kubectl https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/amd64/kubectl && \
     chmod +x /kubectl
+
+# Install kubectl-df-pv
+RUN curl https://krew.sh/df-pv | bash 
 
 # Install SOPS
 RUN curl -LO https://github.com/getsops/sops/releases/download/${SOPS_VERSION}/sops-${SOPS_VERSION}.linux.amd64 && \
@@ -82,6 +86,7 @@ WORKDIR ${WORKSPACE_DIR}
 # Copy tools from builder
 COPY --from=builder /usr/local/bin/helm /usr/local/bin/helm
 COPY --from=builder /kubectl /usr/local/bin/kubectl
+COPY --from=builder /root/.krew/bin/kubectl-df_pv /usr/local/bin/df-pv
 COPY --from=builder /sops /usr/local/bin/sops
 COPY --from=builder /terraform /usr/local/bin/terraform
 COPY --from=builder /packer /usr/local/bin/packer
