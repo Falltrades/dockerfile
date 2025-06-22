@@ -27,6 +27,27 @@ RUN curl -Lo /kubectl https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/amd
 # Install kubectl-df-pv
 RUN curl https://krew.sh/df-pv | bash 
 
+# Install kubectl-cnpg
+RUN curl https://krew.sh/cnpg | bash 
+
+# Install kubectl-sick-pods
+RUN curl https://krew.sh/sick-pods | bash 
+
+# Install kubectl-oomd
+RUN curl https://krew.sh/oomd | bash 
+
+# Install kubectl-kubescape
+RUN curl https://krew.sh/kubescape | bash 
+
+# Install kubectl-ktop
+RUN curl https://krew.sh/ktop | bash 
+
+# Install kubectl-node-resource
+RUN curl https://krew.sh/node-resource | bash 
+
+# Install k9s 
+RUN curl -sS https://webinstall.dev/k9s | bash
+
 # Install SOPS
 RUN curl -LO https://github.com/getsops/sops/releases/download/${SOPS_VERSION}/sops-${SOPS_VERSION}.linux.amd64 && \
     chmod +x sops-${SOPS_VERSION}.linux.amd64 && \
@@ -87,6 +108,13 @@ WORKDIR ${WORKSPACE_DIR}
 COPY --from=builder /usr/local/bin/helm /usr/local/bin/helm
 COPY --from=builder /kubectl /usr/local/bin/kubectl
 COPY --from=builder /root/.krew/bin/kubectl-df_pv /usr/local/bin/df-pv
+COPY --from=builder /root/.krew/bin/kubectl-cnpg /usr/local/bin/cnpg
+COPY --from=builder /root/.krew/bin/kubectl-sick_pods /usr/local/bin/sick-pods
+COPY --from=builder /root/.krew/bin/kubectl-oomd /usr/local/bin/oomd
+COPY --from=builder /root/.krew/bin/kubectl-kubescape /usr/local/bin/kubescape
+COPY --from=builder /root/.krew/bin/kubectl-ktop /usr/local/bin/ktop
+COPY --from=builder /root/.krew/bin/kubectl-node_resource /usr/local/bin/node-resource
+COPY --from=builder /root/.local/bin/k9s /usr/local/bin/k9s
 COPY --from=builder /sops /usr/local/bin/sops
 COPY --from=builder /terraform /usr/local/bin/terraform
 COPY --from=builder /packer /usr/local/bin/packer
