@@ -1,0 +1,28 @@
+FROM alpine:3.22.0 
+
+# Create user and ensure the package list is updated and necessary packages are installed
+RUN addgroup -g 1000 user && \
+    adduser -D -u 1000 -G user -s /bin/bash user && \
+    apk update && \
+    apk add --no-cache \
+        sudo \
+        bash \
+        vim \
+        py3-pip \
+        git &&  \
+    find /usr/lib -name EXTERNALLY-MANAGED -exec rm -f {} \;
+
+# Set user as default
+USER user
+WORKDIR /home/user
+
+# Install the Python modules
+RUN pip3 install --upgrade pip && \
+    pip3 install --no-cache-dir ansible pyyaml kubernetes python-gitlab jmespath hvac
+
+# Install Ansible collections
+ENV PATH="/home/user/.local/bin:$PATH"
+RUN ansible-galaxy collection install community.general kubernetes.core
+
+# Command to run by default when the container starts
+CMD ["bash"]
